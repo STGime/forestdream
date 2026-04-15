@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, Slider as RNSlider } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSleepSession } from '@/features/session/useSleepSession';
@@ -13,13 +13,12 @@ export default function Active() {
   useEffect(() => {
     session.start();
     const t = setTimeout(() => setDim(true), 15000);
-    return () => { clearTimeout(t); session.stop('force_close'); };
+    return () => { clearTimeout(t); };
   }, []);
 
   async function end() {
-    const summary = await session.stop('manual');
-    if (summary) router.replace({ pathname: '/session/summary', params: { id: summary.id } });
-    else router.back();
+    await session.stop('manual');
+    router.replace('/session/complete');
   }
 
   return (

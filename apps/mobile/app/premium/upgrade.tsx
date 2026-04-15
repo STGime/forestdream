@@ -1,6 +1,12 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSubscription } from '@/features/iap/useSubscription';
+
+const BG = '#eef2ed';
+const CARD = '#ffffff';
+const INK = '#1b2e1f';
+const MUTED = '#6b8069';
+const ACCENT = '#d2b48c';
 
 const FEATURES = [
   'All premium soundscapes',
@@ -12,21 +18,40 @@ const FEATURES = [
 export default function Upgrade() {
   const { purchase, loading } = useSubscription();
   return (
-    <View style={{ flex: 1, backgroundColor: '#0b1410', padding: 24, paddingTop: 60 }}>
-      <Text style={{ color: '#eafff0', fontSize: 28, fontWeight: '700', marginBottom: 20 }}>ForestDream Premium</Text>
-      {FEATURES.map((f) => (
-        <Text key={f} style={{ color: '#b7d3bf', marginBottom: 8 }}>✓ {f}</Text>
-      ))}
-      <View style={{ flex: 1 }} />
-      <Pressable disabled={loading} onPress={() => purchase('monthly')} style={{ backgroundColor: '#3a6b4a', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ color: '#eafff0' }}>Monthly</Text>
-      </Pressable>
-      <Pressable disabled={loading} onPress={() => purchase('annual')} style={{ backgroundColor: '#3a6b4a', padding: 16, borderRadius: 12, alignItems: 'center' }}>
-        <Text style={{ color: '#eafff0' }}>Annual (save 40%)</Text>
-      </Pressable>
-      <Pressable onPress={() => router.push('/premium/mixer')} style={{ padding: 14, alignItems: 'center', marginTop: 16 }}>
-        <Text style={{ color: '#8fa997' }}>Custom mixer →</Text>
-      </Pressable>
+    <View style={{ flex: 1, backgroundColor: BG }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 56, paddingBottom: 220 }}>
+        <Pressable onPress={() => router.back()} style={{ marginBottom: 16 }}>
+          <Text style={{ color: INK, fontSize: 15 }}>← Back</Text>
+        </Pressable>
+
+        <Text style={{ color: INK, fontSize: 32, fontWeight: '700', marginBottom: 20 }}>ForestDream Premium</Text>
+
+        <View style={{ backgroundColor: CARD, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#e3e8e2' }}>
+          {FEATURES.map((f) => (
+            <View key={f} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+              <Text style={{ color: ACCENT, fontWeight: '700', marginRight: 10, fontSize: 16 }}>✓</Text>
+              <Text style={{ color: INK, fontSize: 15, flex: 1 }}>{f}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: BG, borderTopWidth: 1, borderTopColor: '#dde4dd' }}>
+        <Pressable
+          disabled={loading}
+          onPress={() => purchase('monthly')}
+          style={{ backgroundColor: ACCENT, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 10 }}
+        >
+          <Text style={{ color: INK, fontWeight: '600', fontSize: 16 }}>Monthly</Text>
+        </Pressable>
+        <Pressable
+          disabled={loading}
+          onPress={() => purchase('annual')}
+          style={{ backgroundColor: ACCENT, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 10 }}
+        >
+          <Text style={{ color: INK, fontWeight: '600', fontSize: 16 }}>Annual (save 40%)</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

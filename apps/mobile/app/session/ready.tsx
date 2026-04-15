@@ -5,15 +5,19 @@ import { useQuery } from '@tanstack/react-query';
 import { eb } from '@/lib/eurobase';
 import type { Theme } from '@forestdream/shared';
 
+const BG = '#eef2ed';
+const CARD = '#ffffff';
+const INK = '#1b2e1f';
+const MUTED = '#6b8069';
+const ACCENT = '#d2b48c';
+
 export default function Ready() {
   const { themeId, mixId } = useLocalSearchParams<{ themeId?: string; mixId?: string }>();
   const [micStatus, setMicStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
 
   useEffect(() => {
     import('expo-av').then(({ Audio }) =>
-      Audio.getPermissionsAsync().then((p) =>
-        setMicStatus(p.granted ? 'granted' : 'denied')
-      )
+      Audio.getPermissionsAsync().then((p) => setMicStatus(p.granted ? 'granted' : 'denied'))
     );
   }, []);
 
@@ -39,8 +43,8 @@ export default function Ready() {
 
   if ((themeId && !theme) || (mixId && !mix)) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0b1410' }}>
-        <ActivityIndicator color="#8fd19e" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG }}>
+        <ActivityIndicator color={ACCENT} />
       </View>
     );
   }
@@ -55,56 +59,46 @@ export default function Ready() {
     });
   }
 
+  async function requestMic() {
+    const { Audio } = await import('expo-av');
+    const p = await Audio.requestPermissionsAsync();
+    setMicStatus(p.granted ? 'granted' : 'denied');
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#0b1410', padding: 24, paddingTop: 80 }}>
-      <Pressable onPress={() => router.back()}>
-        <Text style={{ color: '#8fa997', fontSize: 14, marginBottom: 40 }}>← Back</Text>
-      </Pressable>
-
-      <Text style={{ color: '#8fa997', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-        Ready to sleep
-      </Text>
-      <Text style={{ color: '#eafff0', fontSize: 36, fontWeight: '700', marginBottom: 8 }}>{title}</Text>
-      <Text style={{ color: '#b7d3bf', fontSize: 16, lineHeight: 24, marginBottom: 40 }}>{description}</Text>
-
-      <View style={{ backgroundColor: '#162520', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-        <Text style={{ color: '#b7d3bf', fontSize: 13, marginBottom: 4 }}>Microphone</Text>
-        <Text style={{ color: '#eafff0' }}>
-          {micStatus === 'granted'
-            ? '✓ Adaptive response enabled'
-            : micStatus === 'denied'
-            ? '– Sounds will play without disturbance detection'
-            : 'Checking…'}
+    <View style={{ flex: 1, backgroundColor: BG, justifyContent: 'center', padding: 20 }}>
+      <View style={{ backgroundColor: CARD, borderRadius: 20, padding: 32, alignItems: 'center' }}>
+        <Text style={{ color: INK, fontSize: 34, fontWeight: '700', textAlign: 'center' }}>{title}</Text>
+        <Text style={{ color: MUTED, fontSize: 16, textAlign: 'center', marginTop: 12, lineHeight: 24 }}>
+          {description}
         </Text>
+
+        <Text style={{ color: INK, fontSize: 56, fontWeight: '800', marginTop: 36, marginBottom: 36, letterSpacing: 2 }}>
+          00:00:00
+        </Text>
+
+        <Pressable
+          onPress={begin}
+          style={{ backgroundColor: ACCENT, paddingVertical: 16, borderRadius: 14, alignItems: 'center', width: '100%', marginBottom: 12 }}
+        >
+          <Text style={{ color: INK, fontSize: 16, fontWeight: '600' }}>Start Sleep Session</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.replace('/(tabs)/home')}
+          style={{ borderWidth: 1, borderColor: '#dde4dd', paddingVertical: 16, borderRadius: 14, alignItems: 'center', width: '100%' }}
+        >
+          <Text style={{ color: INK, fontSize: 16 }}>Back to Home</Text>
+        </Pressable>
+
         {micStatus === 'denied' && (
-          <Pressable
-            onPress={async () => {
-              const { Audio } = await import('expo-av');
-              const p = await Audio.requestPermissionsAsync();
-              setMicStatus(p.granted ? 'granted' : 'denied');
-            }}
-            style={{ marginTop: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#3a6b4a', alignSelf: 'flex-start' }}
-          >
-            <Text style={{ color: '#8fd19e', fontSize: 13 }}>Enable microphone</Text>
+          <Pressable onPress={requestMic} style={{ marginTop: 20 }}>
+            <Text style={{ color: MUTED, fontSize: 13, textAlign: 'center' }}>
+              Tap to enable microphone for disturbance detection
+            </Text>
           </Pressable>
         )}
       </View>
-
-      <View style={{ backgroundColor: '#162520', padding: 16, borderRadius: 12, marginBottom: 40 }}>
-        <Text style={{ color: '#b7d3bf', fontSize: 13, marginBottom: 4 }}>Tip</Text>
-        <Text style={{ color: '#eafff0', lineHeight: 22 }}>
-          Place the phone within arm's reach, screen down. The display will dim automatically.
-        </Text>
-      </View>
-
-      <View style={{ flex: 1 }} />
-
-      <Pressable
-        onPress={begin}
-        style={{ backgroundColor: '#3a6b4a', padding: 18, borderRadius: 14, alignItems: 'center' }}
-      >
-        <Text style={{ color: '#eafff0', fontSize: 17, fontWeight: '600' }}>Start session</Text>
-      </Pressable>
     </View>
   );
 }

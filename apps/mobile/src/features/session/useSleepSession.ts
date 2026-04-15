@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { computeQualityScore, type DisturbanceEvent as SharedEvent } from '@forestdream/shared';
+import type { DisturbanceEvent as SharedEvent } from '@forestdream/shared';
 import { Player } from '@/features/audio/Player';
 import { AdaptiveResponder } from '@/features/audio/AdaptiveResponder';
 import { SnoreDetector } from '@/features/detection/SnoreDetector.native';
 import { eb } from '@/lib/eurobase';
 import { resolveAssetUri } from '@/features/themes/resolveAsset';
+import { setPending } from './pendingSession';
 
 interface Args { themeId?: string; mixId?: string }
 
@@ -116,33 +117,29 @@ export function useSleepSession(args: Args) {
     if (!startedAt.current) return null;
     const endedAt = new Date();
     const duration = Math.floor((endedAt.getTime() - startedAt.current.getTime()) / 1000);
-    const quality = computeQualityScore(duration, eventsRef.current.length);
-    const { data: user } = await eb.auth.getUser();
-    const { data: inserted } = await eb.db.from('sleep_sessions').insert({
-      user_id: user?.id,
-      theme_id: args.themeId ?? null,
-      custom_mix_id: args.mixId ?? null,
-      started_at: startedAt.current.toISOString(),
-      ended_at: endedAt.toISOString(),
-      duration_seconds: duration,
-      disturbance_count: eventsRef.current.length,
-      quality_score: quality,
-      ended_reason: reason,
-    });
-    const row = Array.isArray(inserted) ? inserted[0] : inserted;
-    const id = (row as { id?: string } | null)?.id;
-    if (id && eventsRef.current.length > 0) {
-      for (const e of eventsRef.current) {
-        await eb.db.from('disturbance_events').insert({
-          session_id: id,
-          detected_at: e.detected_at,
-          kind: e.kind,
-          response_layer: e.response_layer ?? null,
-        });
-      }
+
+    // Stash for the "Sleep Session Complete" screen — user confirms with a
+    // 1–5 rating before we persist. Nothing hits the DB here.
+    let themeName: string | undefined;
+    if (args.themeId) {
+      try {
+        const res = await eb.db.from<{ name: string }>('themes').eq('id', args.themeId);
+        const row = Array.isArray(res.data) ? res.data[0] : res.data;
+        themeName = (row as { name?: string } | null)?.name;
+      } catch { /* ignore */ }
     }
+    setPending({
+      startedAt: startedAt.current.toISOString(),
+      endedAt: endedAt.toISOString(),
+      durationSeconds: duration,
+      themeId: args.themeId,
+      themeName,
+      mixId: args.mixId,
+      events: [...eventsRef.current],
+      endedReason: reason,
+    });
     qc.invalidateQueries({ queryKey: ['sessions'] });
-    return { id, quality };
+    return { durationSeconds: duration, disturbanceCount: eventsRef.current.length };
   }
 
   return { start, stop, elapsedLabel, disturbanceCount };
