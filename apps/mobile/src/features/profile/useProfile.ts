@@ -2,14 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import type { Profile } from '@forestdream/shared';
 import { eb } from '@/lib/eurobase';
 
-export function useProfile(): Profile | undefined {
-  const { data } = useQuery<Profile | undefined>({
+export function useProfile(): Profile | null | undefined {
+  const { data } = useQuery<Profile | null>({
     queryKey: ['profile'],
     queryFn: async () => {
       const { data: user } = await eb.auth.getUser();
-      if (!user?.user) return undefined;
-      const { data } = await eb.db.from('profiles').select('*').eq('user_id', user.user.id);
-      return data?.[0] as Profile | undefined;
+      if (!user?.id) return null;
+      const res = await eb.db.from<Profile>('profiles').eq('user_id', user.id);
+      const rows = Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+      return rows[0] ?? null;
     },
   });
   return data;

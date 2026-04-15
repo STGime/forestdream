@@ -20,9 +20,13 @@ export class Player {
     });
   }
 
-  async loadLayer(key: string, uri: string, volume = 1): Promise<void> {
+  async loadLayer(
+    key: string,
+    source: { uri: string; headers?: Record<string, string> },
+    volume = 1
+  ): Promise<void> {
     const { sound } = await Audio.Sound.createAsync(
-      { uri },
+      source,
       { isLooping: true, volume, shouldPlay: true }
     );
     this.layers.push({ key, sound, baseVolume: volume });
@@ -31,7 +35,6 @@ export class Player {
   async setLayerVolume(key: string, volume: number, durationMs = 1500): Promise<void> {
     const layer = this.layers.find((l) => l.key === key);
     if (!layer) return;
-    // Simple crossfade: step volume over duration.
     const steps = 10;
     const stepMs = durationMs / steps;
     const status = await layer.sound.getStatusAsync();

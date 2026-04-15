@@ -4,7 +4,12 @@ dist/
 .expo/
 .env
 .env.local
-ios/Pods/
-android/.gradle/
+**/ios/Pods/
+**/ios/build/
+**/android/.gradle/
+**/android/build/
+**/android/app/build/
+**/android/.cxx/
+**/android/*/build/
 *.log
 .DS_Store

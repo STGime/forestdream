@@ -6,6 +6,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "app.eurobase.forestdream",
       "supportsTablet": false,
@@ -20,8 +21,14 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-av", { "microphonePermission": "ForestDream uses your microphone on-device to detect disturbances. Audio is never recorded or uploaded." }]
+      ["expo-av", { "microphonePermission": "ForestDream uses your microphone on-device to detect disturbances. Audio is never recorded or uploaded." }],
+      "./plugins/with-iap-play-flavor"
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "EUROBASE_URL": "https://forestdream.eurobase.app",
+      "EUROBASE_PUBLIC_KEY": "eb_pk_79b80f5ca7de58c4d919748e4ae85cdd",
+      "API_BASE": "https://forestdream-api.eurobase.app"
+    }
   }
 }

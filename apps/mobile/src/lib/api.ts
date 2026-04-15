@@ -1,6 +1,7 @@
 import { eb } from './eurobase';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'https://forestdream-api.eurobase.app';
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE ?? 'https://forestdream-api.eurobase.app';
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await eb.auth.getSession();

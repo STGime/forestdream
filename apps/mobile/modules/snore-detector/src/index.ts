@@ -13,6 +13,13 @@ declare class SnoreDetectorModuleType extends NativeModule<{
   stop(): Promise<void>;
 }
 
-const Native = requireNativeModule<SnoreDetectorModuleType>('SnoreDetectorModule');
+// Gracefully return null in Expo Go / environments without the native module.
+// Callers (SnoreDetector wrapper) fall back to a no-op when null.
+let mod: SnoreDetectorModuleType | null = null;
+try {
+  mod = requireNativeModule<SnoreDetectorModuleType>('SnoreDetectorModule');
+} catch {
+  mod = null;
+}
 
-export default Native;
+export default mod;

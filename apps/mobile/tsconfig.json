@@ -4,7 +4,18 @@
     "jsx": "react-native",
     "moduleResolution": "Bundler",
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
   },
-  "include": ["src", "app.d.ts"]
+  "include": [
+    "src",
+    "app",
+    "index.js",
+    "app.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }
