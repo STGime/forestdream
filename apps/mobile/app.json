@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "ForestDream",
+    "slug": "forestdream",
+    "scheme": "forestdream",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "app.eurobase.forestdream",
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"],
+        "NSMicrophoneUsageDescription": "ForestDream listens for snoring so it can respond with soothing sounds. All audio is processed on your device and is never recorded, stored, or uploaded."
+      }
+    },
+    "android": {
+      "package": "app.eurobase.forestdream",
+      "permissions": ["RECORD_AUDIO", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_MEDIA_PLAYBACK", "POST_NOTIFICATIONS"]
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-av", { "microphonePermission": "ForestDream uses your microphone on-device to detect disturbances. Audio is never recorded or uploaded." }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

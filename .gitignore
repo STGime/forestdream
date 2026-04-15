@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.turbo/
+.expo/
+.env
+.env.local
+ios/Pods/
+android/.gradle/
+*.log
+.DS_Store

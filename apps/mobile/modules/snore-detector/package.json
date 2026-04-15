@@ -1,0 +1,7 @@
+{
+  "name": "snore-detector",
+  "version": "0.1.0",
+  "description": "On-device snore/disturbance detector. No audio leaves the native layer.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

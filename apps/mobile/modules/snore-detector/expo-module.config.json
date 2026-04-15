@@ -1,0 +1,5 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": { "modules": ["SnoreDetectorModule"] },
+  "android": { "modules": ["app.eurobase.forestdream.snoredetector.SnoreDetectorModule"] }
+}
