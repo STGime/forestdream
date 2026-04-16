@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, ImageBackground } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { eb } from '@/lib/eurobase';
 import { useProfile } from '@/features/profile/useProfile';
 import { THEME_TAGS, THEME_COLORS, mixTags } from '@/features/themes/tags';
+import { useStorageImage } from '@/features/themes/useStorageImage';
 import type { Theme } from '@forestdream/shared';
 
 const BG = '#eef2ed';
@@ -15,7 +16,7 @@ const ACCENT = '#d2b48c';
 
 type Selection = { kind: 'theme'; id: string } | { kind: 'mix'; id: string } | null;
 
-interface Mix { id: string; name: string; elements: Array<{ asset_key: string }> }
+interface Mix { id: string; name: string; elements: Array<{ asset_key: string }>; image_key?: string | null }
 
 export default function Home() {
   const profile = useProfile();
@@ -113,9 +114,10 @@ export default function Home() {
   );
 }
 
-function ThemeCard({ theme, locked, selected, onPress }: { theme: Theme; locked: boolean; selected: boolean; onPress: () => void }) {
+function ThemeCard({ theme, locked, selected, onPress }: { theme: Theme & { hero_key?: string | null }; locked: boolean; selected: boolean; onPress: () => void }) {
   const color = THEME_COLORS[theme.id] ?? { from: '#7a8b7d', to: '#c0c9c0', emoji: '🌲' };
   const tags = THEME_TAGS[theme.id] ?? [];
+  const heroUri = useStorageImage(theme.hero_key);
   return (
     <Pressable
       onPress={onPress}
@@ -128,10 +130,14 @@ function ThemeCard({ theme, locked, selected, onPress }: { theme: Theme; locked:
         borderColor: selected ? ACCENT : '#e3e8e2',
       }}
     >
-      <View style={{ height: 120, backgroundColor: color.from, justifyContent: 'center', alignItems: 'center' }}>
+      <ImageBackground
+        source={heroUri ? { uri: heroUri } : undefined}
+        style={{ height: 140, backgroundColor: color.from, justifyContent: 'center', alignItems: 'center' }}
+        imageStyle={{ resizeMode: 'cover' }}
+      >
         <View style={{ position: 'absolute', right: -20, bottom: -20, width: 180, height: 180, backgroundColor: color.to, borderRadius: 90, opacity: 0.55 }} />
-        <Text style={{ fontSize: 54 }}>{color.emoji}</Text>
-      </View>
+        {!heroUri && <Text style={{ fontSize: 54 }}>{color.emoji}</Text>}
+      </ImageBackground>
       <View style={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
           <Text style={{ color: INK, fontSize: 20, fontWeight: '700', flex: 1 }}>{theme.name}</Text>
@@ -151,20 +157,31 @@ function ThemeCard({ theme, locked, selected, onPress }: { theme: Theme; locked:
 }
 
 function MixCard({ mix, selected, onPress }: { mix: Mix; selected: boolean; onPress: () => void }) {
+  const heroUri = useStorageImage(mix.image_key);
   return (
     <Pressable
       onPress={onPress}
       style={{
         backgroundColor: CARD,
-        borderRadius: 16, padding: 16, marginBottom: 14,
+        borderRadius: 16, marginBottom: 14, overflow: 'hidden',
         borderWidth: selected ? 2 : 1,
         borderColor: selected ? ACCENT : '#e3e8e2',
       }}
     >
-      <Text style={{ color: INK, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>{mix.name}</Text>
-      <Text style={{ color: MUTED, fontSize: 14, marginBottom: 10 }}>Custom mix</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {mixTags(mix.elements ?? []).map((t) => <Pill key={t} label={t} />)}
+      <ImageBackground
+        source={heroUri ? { uri: heroUri } : undefined}
+        style={{ height: 140, backgroundColor: '#5d737e', justifyContent: 'center', alignItems: 'center' }}
+        imageStyle={{ resizeMode: 'cover' }}
+      >
+        <View style={{ position: 'absolute', right: -20, bottom: -20, width: 180, height: 180, backgroundColor: '#c0c9c0', borderRadius: 90, opacity: 0.55 }} />
+        {!heroUri && <Text style={{ fontSize: 48 }}>🎛️</Text>}
+      </ImageBackground>
+      <View style={{ padding: 16 }}>
+        <Text style={{ color: INK, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>{mix.name}</Text>
+        <Text style={{ color: MUTED, fontSize: 14, marginBottom: 10 }}>Custom mix</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {mixTags(mix.elements ?? []).map((t) => <Pill key={t} label={t} />)}
+        </View>
       </View>
     </Pressable>
   );

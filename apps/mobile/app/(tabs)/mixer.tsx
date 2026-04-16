@@ -7,6 +7,7 @@ import { useProfile } from '@/features/profile/useProfile';
 import { eb } from '@/lib/eurobase';
 import { Player } from '@/features/audio/Player';
 import { resolveAssetUri } from '@/features/themes/resolveAsset';
+import { generateAndUploadMixImage } from '@/features/themes/generateMixImage';
 
 const BG = '#eef2ed';
 const CARD = '#ffffff';
@@ -38,6 +39,7 @@ export default function Mixer() {
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [previewing, setPreviewing] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
   const playerRef = useRef<Player | null>(null);
   const previewKeyRef = useRef<string>('');
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -166,11 +168,29 @@ export default function Mixer() {
     const elements = selectedEntries.map(([k, v]) => ({ asset_key: k, volume: v }));
     const { data: user } = await eb.auth.getUser();
     if (!user?.id) { Alert.alert('Not signed in'); return; }
-    const { error } = await eb.db.from('custom_mixes').insert({ user_id: user.id, name: name.trim(), elements });
-    if (error) { Alert.alert('Could not save', String(error)); return; }
-    qc.invalidateQueries({ queryKey: ['mixes'] });
-    setName('');
-    setSelected({});
+    setSaving(true);
+    try {
+      const ins = await eb.db.from<{ id: string }>('custom_mixes')
+        .insert({ user_id: user.id, name: name.trim(), elements });
+      if (ins.error) { Alert.alert('Could not save', String(ins.error)); return; }
+      const row = Array.isArray(ins.data) ? ins.data[0] : ins.data;
+      const mixId = (row as { id?: string } | null)?.id;
+
+      if (mixId) {
+        // Fire-and-forget: image generation can take a few seconds and the
+        // card falls back to a solid color until the key lands.
+        generateAndUploadMixImage(mixId, name.trim(), elements)
+          .then((imageKey) => eb.db.from('custom_mixes').update(mixId, { image_key: imageKey }))
+          .then(() => qc.invalidateQueries({ queryKey: ['mixes'] }))
+          .catch((e) => console.warn('[mix] image gen failed', e));
+      }
+
+      qc.invalidateQueries({ queryKey: ['mixes'] });
+      setName('');
+      setSelected({});
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: string) {
@@ -293,8 +313,8 @@ export default function Mixer() {
               onChangeText={setName}
               style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: INK, fontSize: 15, marginTop: 4, marginBottom: 10 }}
             />
-            <Pressable onPress={save} style={{ backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
-              <Text style={{ color: INK, fontWeight: '600' }}>Save mix</Text>
+            <Pressable onPress={save} disabled={saving} style={{ backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 12, alignItems: 'center', opacity: saving ? 0.7 : 1 }}>
+              <Text style={{ color: INK, fontWeight: '600' }}>{saving ? 'Saving…' : 'Save mix'}</Text>
             </Pressable>
           </>
         )}

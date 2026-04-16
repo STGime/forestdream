@@ -22,6 +22,7 @@ create table themes (
   tier text not null check (tier in ('free','premium')),
   preview_key text,
   asset_keys jsonb not null,
+  hero_key text,
   sort_order int default 0
 );
 
@@ -31,6 +32,7 @@ create table custom_mixes (
   user_id uuid not null references users(id) on delete cascade,
   name text not null,
   elements jsonb not null,
+  image_key text,
   created_at timestamptz default now()
 );
 create index on custom_mixes (user_id);
