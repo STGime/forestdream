@@ -11,12 +11,18 @@ export class Player {
   private layers: Layer[] = [];
 
   async configure(): Promise<void> {
+    // Note: staysActiveInBackground: true requires a foreground service on
+    // Android — when it's missing, ExoPlayer can silently route output to a
+    // null sink even though isPlaying reports true. Keep it off for now;
+    // re-enable after we add the foreground service for real sleep sessions.
     await Audio.setAudioModeAsync({
-      staysActiveInBackground: true,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: false,
       playsInSilentModeIOS: true,
-      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-      shouldDuckAndroid: false,
+      interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+      interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
     });
   }
 
@@ -25,10 +31,20 @@ export class Player {
     source: { uri: string; headers?: Record<string, string> },
     volume = 1
   ): Promise<void> {
-    const { sound } = await Audio.Sound.createAsync(
+    const { sound, status } = await Audio.Sound.createAsync(
       source,
-      { isLooping: true, volume, shouldPlay: true }
+      { isLooping: true, volume, shouldPlay: true },
+      undefined,
+      true
     );
+    console.log('[Player] createAsync status', key, JSON.stringify(status));
+    if (!status.isLoaded) {
+      console.warn('[Player] sound failed to load', key, (status as { error?: string }).error);
+    } else {
+      await sound.playAsync().catch((e) => console.warn('[Player] playAsync failed', key, e));
+      const after = await sound.getStatusAsync();
+      console.log('[Player] after playAsync', key, JSON.stringify(after));
+    }
     this.layers.push({ key, sound, baseVolume: volume });
   }
 

@@ -20,7 +20,11 @@ export default function Upgrade() {
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 56, paddingBottom: 220 }}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 16 }}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))}
+          hitSlop={12}
+          style={{ marginBottom: 16 }}
+        >
           <Text style={{ color: INK, fontSize: 15 }}>← Back</Text>
         </Pressable>
 

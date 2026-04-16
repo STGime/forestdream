@@ -6,6 +6,7 @@ import { isValidAlias } from '@forestdream/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { eb } from '@/lib/eurobase';
 import { useProfile } from '@/features/profile/useProfile';
+import { loadDevPremium, setDevPremium } from '@/features/profile/devPremium';
 
 const BG = '#eef2ed';
 const CARD = '#ffffff';
@@ -20,12 +21,20 @@ export default function Profile() {
   const [alias, setAlias] = useState('');
   const [saving, setSaving] = useState(false);
   const [mic, setMic] = useState(false);
+  const [devPremium, setDevPremiumLocal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { if (profile?.alias) setAlias(profile.alias); }, [profile?.alias]);
   useEffect(() => {
     Audio.getPermissionsAsync().then((p) => setMic(p.granted));
+    loadDevPremium().then(setDevPremiumLocal);
   }, []);
+
+  async function toggleDevPremium(on: boolean) {
+    setDevPremiumLocal(on);
+    await setDevPremium(on);
+    qc.invalidateQueries({ queryKey: ['profile'] });
+  }
 
   const isPremium = profile?.tier === 'premium';
   const dirty = !!profile && alias !== profile.alias && isValidAlias(alias);
@@ -144,7 +153,26 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* Sign out */}
+      {__DEV__ && (
+        <View style={[panel, { marginTop: 20 }]}>
+          <Text style={h2}>Developer</Text>
+          <Text style={sub}>Local overrides for testing — not persisted to the server</Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1, paddingRight: 16 }}>
+              <Text style={{ color: INK, fontSize: 16, fontWeight: '700' }}>Premium override</Text>
+              <Text style={{ color: MUTED, fontSize: 14, marginTop: 2 }}>Unlock premium features client-side for testing</Text>
+            </View>
+            <Switch
+              value={devPremium}
+              onValueChange={toggleDevPremium}
+              trackColor={{ true: ACCENT, false: '#c9d0c7' }}
+              thumbColor="#ffffff"
+            />
+          </View>
+        </View>
+      )}
+
       <View style={[panel, { marginTop: 20 }]}>
         <Pressable onPress={signOut} style={{ paddingVertical: 14, alignItems: 'center' }}>
           <Text style={{ color: '#c76d60', fontSize: 15, fontWeight: '600' }}>Sign out</Text>

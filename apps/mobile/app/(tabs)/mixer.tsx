@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { canAccess, MAX_CUSTOM_MIXES } from '@forestdream/shared';
 import { useProfile } from '@/features/profile/useProfile';
 import { eb } from '@/lib/eurobase';
+import { Player } from '@/features/audio/Player';
+import { resolveAssetUri } from '@/features/themes/resolveAsset';
 
 const BG = '#eef2ed';
 const CARD = '#ffffff';
@@ -34,6 +36,86 @@ export default function Mixer() {
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<Record<string, number>>({});
+  const [previewing, setPreviewing] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const playerRef = useRef<Player | null>(null);
+  const previewKeyRef = useRef<string>('');
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function stopPreview() {
+    setPreviewing(false);
+    if (previewTimerRef.current) {
+      clearTimeout(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+    if (playerRef.current) {
+      await playerRef.current.stop().catch(() => {});
+      playerRef.current = null;
+    }
+  }
+
+  // Live-update volumes while previewing without reloading layers.
+  useEffect(() => {
+    if (!previewing || !playerRef.current) return;
+    for (const [k, v] of Object.entries(selected)) {
+      playerRef.current.setLayerVolume(k, v, 200).catch(() => {});
+    }
+  }, [selected, previewing]);
+
+  // Stop preview when leaving the tab. Must use a stable callback or
+  // useFocusEffect will re-run on every render and immediately call the
+  // cleanup, killing the preview within the first render cycle.
+  useFocusEffect(
+    useCallback(() => () => { stopPreview(); }, [])
+  );
+
+  useEffect(() => () => { stopPreview(); }, []);
+
+  async function startPreview() {
+    if (Object.keys(selected).length === 0) return;
+    setLoadingPreview(true);
+    try {
+      const snapshotKey = Object.keys(selected).sort().join('|');
+      previewKeyRef.current = snapshotKey;
+      const p = new Player();
+      try { await p.configure(); console.log('[mixer] audio configured'); } catch (e) { console.warn('[mixer] configure failed', e); }
+      let loaded = 0;
+      for (const [key, vol] of Object.entries(selected)) {
+        try {
+          console.log('[mixer] resolving', key);
+          const uri = await resolveAssetUri(key);
+          console.log('[mixer] got uri', uri.slice(0, 80) + '…');
+          await p.loadLayer(key, { uri }, vol);
+          loaded += 1;
+          console.log('[mixer] loaded layer', key, 'vol', vol);
+        } catch (e) {
+          console.warn('[mixer] layer failed', key, (e as Error).message);
+        }
+      }
+      if (previewKeyRef.current !== snapshotKey) {
+        await p.stop().catch(() => {});
+        return;
+      }
+      if (loaded === 0) {
+        console.warn('[mixer] no layers loaded — preview aborted');
+        Alert.alert('Preview failed', 'Could not load audio. Check Metro logs.');
+        return;
+      }
+      playerRef.current = p;
+      setPreviewing(true);
+      console.log('[mixer] preview started with', loaded, 'layer(s)');
+      // Auto-stop after 10 s. Stems are longer than 10 s and looping is on,
+      // so shorter clips would still sound continuous inside the window.
+      previewTimerRef.current = setTimeout(() => { stopPreview(); }, 10_000);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function togglePreview() {
+    if (previewing) await stopPreview();
+    else await startPreview();
+  }
 
   const { data: mixes = [] } = useQuery<Mix[]>({
     queryKey: ['mixes'],
@@ -69,6 +151,8 @@ export default function Mixer() {
       else delete next[key];
       return next;
     });
+    // Layer set changed — preview must be rebuilt next time user taps Preview.
+    if (previewing) stopPreview();
   }
 
   function setVol(key: string, v: number) {
@@ -80,7 +164,9 @@ export default function Mixer() {
     if (count < 2) { Alert.alert('Pick at least 2 sounds'); return; }
     if (mixes.length >= MAX_CUSTOM_MIXES) { Alert.alert(`Max ${MAX_CUSTOM_MIXES} mixes`); return; }
     const elements = selectedEntries.map(([k, v]) => ({ asset_key: k, volume: v }));
-    const { error } = await eb.db.from('custom_mixes').insert({ name: name.trim(), elements });
+    const { data: user } = await eb.auth.getUser();
+    if (!user?.id) { Alert.alert('Not signed in'); return; }
+    const { error } = await eb.db.from('custom_mixes').insert({ user_id: user.id, name: name.trim(), elements });
     if (error) { Alert.alert('Could not save', String(error)); return; }
     qc.invalidateQueries({ queryKey: ['mixes'] });
     setName('');
@@ -178,12 +264,34 @@ export default function Mixer() {
               );
             })}
 
+            <Pressable
+              onPress={togglePreview}
+              disabled={loadingPreview}
+              style={{
+                borderWidth: 1, borderColor: previewing ? ACCENT : BORDER,
+                backgroundColor: previewing ? '#faf1e1' : CARD,
+                paddingVertical: 14, borderRadius: 12, alignItems: 'center',
+                marginTop: 8, marginBottom: 10, flexDirection: 'row', justifyContent: 'center',
+              }}
+            >
+              {loadingPreview ? (
+                <ActivityIndicator color={ACCENT} />
+              ) : (
+                <>
+                  <Text style={{ fontSize: 16, marginRight: 8 }}>{previewing ? '⏹' : '▶'}</Text>
+                  <Text style={{ color: INK, fontWeight: '600' }}>
+                    {previewing ? 'Stop preview' : 'Preview mix'}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
             <TextInput
               placeholder="Mix name"
               placeholderTextColor={MUTED}
               value={name}
               onChangeText={setName}
-              style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: INK, fontSize: 15, marginTop: 8, marginBottom: 10 }}
+              style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: INK, fontSize: 15, marginTop: 4, marginBottom: 10 }}
             />
             <Pressable onPress={save} style={{ backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}>
               <Text style={{ color: INK, fontWeight: '600' }}>Save mix</Text>
